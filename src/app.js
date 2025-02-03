@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import __dirname from "./utils.js";
-import handlebars from "express-handlebars";
+import handlebars from "express-handlebars"; // ✅ Importamos Handlebars
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -23,7 +23,7 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public"))); // Corregido
+app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
 
 // Configuración de sesiones
@@ -45,13 +45,18 @@ initializePassport();
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Configuración de Handlebars
+// 🔹 **Registrar el helper "eq" en Handlebars**
 app.engine(
   "handlebars",
   handlebars.engine({
     runtimeOptions: {
       allowProtoPropertiesByDefault: true,
       allowProtoMethodsByDefault: true,
+    },
+    helpers: {
+      eq: function (a, b) {
+        return a === b;
+      },
     },
   })
 );

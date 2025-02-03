@@ -48,6 +48,17 @@ class CartController {
             res.status(500).json({ error: "Error al eliminar el carrito" });
         }
     }
+
+    async addProductToCart(req, res) {
+        try {
+            const { cid, pid } = req.params;
+            const updatedCart = await CartService.addProductToCart(cid, pid);
+            if (!updatedCart) return res.status(404).json({ error: "Carrito o producto no encontrado" });
+            res.json(updatedCart);
+        } catch (error) {
+            res.status(500).json({ error: "Error al agregar el producto al carrito" });
+        }
+    }
 }
 
 export default new CartController();

@@ -2,10 +2,9 @@
 import { Router } from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import userService from "../services/user.service.js";
-import { createHash } from "../utils.js";
 import { isLoggedIn, isLoggedOut } from "../middlewares/auth.js";
 import dotenv from "dotenv";
+import UserDTO from "../dto/user.dto.js";
 
 dotenv.config();
 
@@ -41,8 +40,10 @@ router.get("/githubcallback", passport.authenticate("github", {
 
 router.get("/current", passport.authenticate("current", { session: false }), (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-  res.json({ status: "success", user: req.user });
-});
+
+  const userDTO = new UserDTO(req.user); // Usamos el DTO
+  res.json({ status: "success", user: userDTO });
+});;
 
 router.post("/register", async (req, res, next) => {
   passport.authenticate("register", (err, user) => {

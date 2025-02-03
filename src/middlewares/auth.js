@@ -39,3 +39,16 @@ export const isLoggedOut = (req, res, next) => {
       next();
   }
 };
+
+export const authorizationRole = (roles) => {
+  return (req, res, next) => {
+      if (!req.user) return res.status(401).send({ message: "Unauthorized" });
+      
+      if (!roles.includes(req.user.role)) {
+          return res.status(403).send({ error: "No tienes permisos para realizar esta acción" });
+      }
+      
+      next();
+  };
+};
+
