@@ -1,5 +1,5 @@
 import { Router } from "express";
-import productModel from "../models/product.model.js";  // Asegúrate de importar el modelo correcto
+import productService from "../services/product.service.js";
 
 const router = Router();
 
@@ -7,10 +7,9 @@ const router = Router();
 router.get("/", async (req, res) => {
   const limit = req.query.limit ? parseInt(req.query.limit) : null;
   try {
-    // Si existe un límite, devuelve solo esa cantidad de productos
-    const products = limit ? await productModel.find().limit(limit) : await productModel.find();
+    const products = limit ? await productService.getAllProducts({}, { limit }) : await productService.getAllProducts();
     res.render("home", {
-      products,
+      products: products.docs,
       title: "Mercadoliebre",
       style: "home.css",
     });

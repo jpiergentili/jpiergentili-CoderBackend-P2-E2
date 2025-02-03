@@ -1,56 +1,65 @@
 import passport from "passport";
 import local from "passport-local";
-import GithubStrategy from 'passport-github';
-import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import GithubStrategy from "passport-github";
+import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import { createHash, isValidPassword } from "../utils.js";
-import userModel from "../models/user.model.js";
+import userService from "../services/user.service.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const LocalStrategy = local.Strategy;
 
 const initializePassport = () => {
   // Estrategia de GitHub
-  passport.use('github', new GithubStrategy({
-    clientID: 'Iv1.2dd0364c45a5ab8e',
-    clientSecret: '8078d71c11f25b2654b01941c606afe25b121146',
-    callbackURL: 'http://localhost:8080/api/session/githubcallback'
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      console.log(profile);
-
-      const email = profile._json.email || `${profile.username}@github.com`;
-
-      let user = await userModel.findOne({ email });
-      if (!user) { 
-        const newUser = {
-          first_name: profile.displayName || profile.username,
-          last_name: "GitHub",
-          age: 18,
-          email,
-          password: "Autenticado por terceros"
-        };
-        let newUserCreated = await userModel.create(newUser);
-        done(null, newUserCreated);
-      } else {
-        done(null, user);
+  passport.use(
+    "github",
+    new GithubStrategy(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: process.env.GITHUB_CALLBACK_URL,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = profile._json.email || `${profile.username}@github.com`;
+          let user = await userService.getUserByEmail(email);
+          if (!user) {
+            const newUser = {
+              first_name: profile.displayName || profile.username,
+              last_name: "GitHub",
+              age: 18,
+              email,
+              password: "Autenticado por terceros",
+            };
+            user = await userService.createUser(newUser);
+          }
+          done(null, user);
+        } catch (error) {
+          return done(error);
+        }
       }
-    } catch (error) {
-      return done(error);
-    }
-  }));
-  passport.use('current', new JwtStrategy({
-    jwtFromRequest: ExtractJwt.fromExtractors([(req) => req?.cookies?.token]),
-    secretOrKey: "mysecret"
-  }, async (jwt_payload, done) => {
-    try {
-      const user = await userModel.findById(jwt_payload.id);
-      if (!user) {
-        return done(null, false);
+    )
+  );
+
+  passport.use(
+    "current",
+    new JwtStrategy(
+      {
+        jwtFromRequest: ExtractJwt.fromExtractors([(req) => req?.cookies?.token]),
+        secretOrKey: process.env.JWT_SECRET,
+      },
+      async (jwt_payload, done) => {
+        try {
+          const user = await userService.getUserById(jwt_payload.id, false);
+          return done(null, user || false);
+        } catch (error) {
+          return done(error);
+        }
       }
-      return done(null, user);
-    } catch (error) {
-      return done(error);
-    }
-  }));
+    )
+  );
+
   // Estrategia local para registro
   passport.use(
     "register",
@@ -59,21 +68,16 @@ const initializePassport = () => {
       async (req, email, password, done) => {
         const { first_name, last_name, age } = req.body;
         try {
-          const existingUser = await userModel.findOne({ email });
-          if (existingUser) {
-            return done(null, false);
-          }
-
-          const newUser = new userModel({
+          const existingUser = await userService.getUserByEmail(email, false);
+          if (existingUser) return done(null, false);
+          const newUser = await userService.createUser({
             first_name,
             last_name,
             email,
             age,
             password: createHash(password),
           });
-
-          const userCreated = await newUser.save();
-          return done(null, userCreated);
+          return done(null, newUser);
         } catch (error) {
           return done(error);
         }
@@ -88,12 +92,9 @@ const initializePassport = () => {
       { passReqToCallback: true, usernameField: "email" },
       async (req, email, password, done) => {
         try {
-          const user = await userModel.findOne({ email });
-          if (!user) {
-            return done(null, false, { message: "Usuario no encontrado" });
-          }
-          if (!isValidPassword(user, password)) {
-            return done(null, false, { message: "Contraseña incorrecta" });
+          const user = await userService.getUserByEmail(email, false);
+          if (!user || !isValidPassword(user, password)) {
+            return done(null, false, { message: "Credenciales incorrectas" });
           }
           return done(null, user);
         } catch (error) {
@@ -103,14 +104,13 @@ const initializePassport = () => {
     )
   );
 
-  // Serialización y deserialización de usuarios
   passport.serializeUser((user, done) => {
-    done(null, user._id);
+    done(null, user._id.toString());
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await userModel.findById(id);
+      const user = await userService.getUserById(id, false);
       done(null, user);
     } catch (error) {
       done(error);
