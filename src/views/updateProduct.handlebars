@@ -13,31 +13,51 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  <!-- 🔥 Importar SweetAlert2 -->
+
 <script>
-  function updateProduct(productId) {
+  function updateProduct() {
+    const productId = "{{product.id}}"; // 🔥 Obtener correctamente el ID
+
     fetch(`/api/products/${productId}`, {
       method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         title: document.getElementById('title').value,
         description: document.getElementById('description').value,
-        price: document.getElementById('price').value,
-        thumbnails: document.getElementById('thumbnail').value,
+        price: parseFloat(document.getElementById('price').value),
+        thumbnails: [document.getElementById('thumbnail').value],  // 🔥 Convertir en array
         code: document.getElementById('code').value,
-        stock: document.getElementById('stock').value,
+        stock: parseInt(document.getElementById('stock').value, 10),
         category: document.getElementById('category').value
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      })
     })
     .then(response => {
-      if (response.ok) {
-        window.location.href = '/api/products';  // Redirige a la lista de productos
-      } else {
-        throw new Error('Error al actualizar el producto.');
+      if (!response.ok) {
+        return response.json().then(err => { throw new Error(err.error || "Error desconocido"); });
       }
+      return response.json();
     })
-    .catch(error => console.error('Error:', error));
+    .then(data => {
+      Swal.fire({
+        icon: 'success',
+        title: 'Producto actualizado',
+        text: 'El producto se ha actualizado correctamente.',
+        confirmButtonText: 'Aceptar'
+      }).then(() => {
+        window.location.href = '/products';  // 🔥 Redirige a la vista de productos
+      });
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message,
+        confirmButtonText: 'Aceptar'
+      });
+    });
   }
 </script>
-

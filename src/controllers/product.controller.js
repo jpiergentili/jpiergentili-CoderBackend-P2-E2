@@ -39,13 +39,22 @@ class ProductController {
 
     async updateProduct(req, res) {
         try {
-            const updatedProduct = await ProductService.updateProduct(req.params.pid, req.body);
+            const { pid } = req.params;
+            const productData = req.body;
+    
+            if (!productData.title || !productData.description || !productData.price || !productData.stock) {
+                return res.status(400).json({ error: "Todos los campos son obligatorios" });
+            }
+    
+            const updatedProduct = await ProductService.updateProduct(pid, productData);
             if (!updatedProduct) return res.status(404).json({ error: "Producto no encontrado" });
+    
             res.json(updatedProduct);
         } catch (error) {
+            console.error("Error al actualizar el producto:", error);
             res.status(500).json({ error: "Error al actualizar el producto" });
         }
-    }
+    }    
 
     async deleteProduct(req, res) {
         try {
