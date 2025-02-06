@@ -1,26 +1,27 @@
 import cartModel from "../models/cart.model.js";
-import CartDTO from "../../dto/cart.dto.js";
 
 class CartDAO {
     async getAll() {
-        const carts = await cartModel.find().populate('cartProducts.product');
-        return carts.map(cart => new CartDTO(cart));
+        return await cartModel.find().populate('cartProducts.product');
     }
 
     async getById(id) {
-        const cart = await cartModel.findById(id).populate('cartProducts.product');
-        return cart ? new CartDTO(cart) : null;
+        return await cartModel.findById(id).populate('cartProducts.product');
     }
 
+    async getByUserId(userId) {
+        console.log("🔍 Buscando carrito para el usuario:", userId);
+        const user = await userModel.findById(userId).populate("cart"); // Buscamos el usuario con su carrito
+        return user ? user.cart : null; // Devolvemos el carrito asociado al usuario
+    }         
+
     async create(cartData) {
-        const cart = await cartModel.create(cartData);
-        return new CartDTO(cart);
+        return await cartModel.create(cartData);
     }
 
     async update(id, cartData) {
-        const cart = await cartModel.findByIdAndUpdate(id, cartData, { new: true }).populate('cartProducts.product');
-        return cart ? new CartDTO(cart) : null;
-    }
+        return await cartModel.findByIdAndUpdate(id, cartData, { new: true }).populate('cartProducts.product');
+    }    
 
     async delete(id) {
         return await cartModel.findByIdAndDelete(id);

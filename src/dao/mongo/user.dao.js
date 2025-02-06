@@ -12,10 +12,15 @@ class UserDAO {
         return user ? (asDTO ? new UserDTO(user) : user) : null;
     }
 
-    async getByEmail(email, asDTO = true) {
-        const user = await userModel.findOne({ email });
-        return user ? (asDTO ? new UserDTO(user) : user) : null;
-    }
+    async getByEmail(email, asDTO = true, includePassword = false) {
+        let userQuery = userModel.findOne({ email }).select("+password").lean(); // 🔹 Asegura que la contraseña se recupere
+        
+        const user = await userQuery;
+        
+        if (!user) return null;
+    
+        return asDTO ? new UserDTO(user, includePassword) : user;
+    }          
 
     async create(userData) {
         const user = await userModel.create(userData);

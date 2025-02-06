@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import { isLoggedIn, isLoggedOut } from "../middlewares/auth.js";
 import dotenv from "dotenv";
 import UserDTO from "../dto/user.dto.js";
+import CartService from "../services/cart.service.js";
+import UserService from "../services/user.service.js";
 
 dotenv.config();
 
@@ -41,26 +43,71 @@ router.get("/githubcallback", passport.authenticate("github", {
 router.get("/current", passport.authenticate("current", { session: false }), (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-  const userDTO = new UserDTO(req.user); // Usamos el DTO
+  const userDTO = new UserDTO(req.user);
   res.json({ status: "success", user: userDTO });
 });;
 
 router.post("/register", async (req, res, next) => {
-  passport.authenticate("register", (err, user) => {
-    if (err || !user) return res.status(400).json({ error: "Registro fallido" });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    res.cookie("token", token, { httpOnly: true }).redirect("/api/session/login");
+  passport.authenticate("register", async (err, user, info) => {
+    if (err) {
+      console.error("❌ Error en Passport:", err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+    if (!user) {
+      console.error("❌ Error: No se pudo registrar el usuario");
+      return res.status(400).json({ error: info?.message || "Registro fallido" });
+    }
+
+    try {
+      // 🔹 Verificamos si el usuario realmente se creó
+      const existingUser = await UserService.getUserByEmail(user.email);
+      if (!existingUser) {
+        return res.status(400).json({ error: "Error al registrar el usuario" });
+      }
+
+      const token = jwt.sign({ id: existingUser.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+      res.cookie("token", token, { httpOnly: true }).json({ status: "success", message: "Usuario registrado correctamente" });
+    } catch (error) {
+      console.error("❌ Error en el registro:", error);
+      res.status(500).json({ error: "Error al registrar usuario" });
+    }
   })(req, res, next);
 });
 
 router.post("/login", (req, res, next) => {
-  passport.authenticate("login", (err, user, info) => {
+  passport.authenticate("login", async (err, user, info) => {
     if (err) return res.status(500).json({ error: "Error en la autenticación" });
     if (!user) return res.status(400).json({ error: info.message || "Credenciales inválidas" });
-    req.login(user, (err) => {
+
+    req.login(user, async (err) => {
       if (err) return res.status(500).json({ error: "Error al iniciar sesión" });
+
+      console.log("🔍 Buscando carrito para el usuario:", user._id);
+      let cart = user.cart ? await CartService.getCartById(user.cart) : null;
+
+      if (!cart) {
+        console.log("⚠️ Usuario sin carrito, creándolo...");
+        cart = await CartService.createCart({ 
+          first_name: user.first_name, 
+          last_name: user.last_name, 
+          cartProducts: [] 
+        });
+
+        await UserService.updateUser(user._id, { cart: cart._id });
+      }
+
+      console.log("✅ Carrito asignado al usuario:", cart._id);
+
+      req.session.user = {
+        _id: user._id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        role: user.role,
+        cart: cart._id,
+      };
+
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-      req.session.user = user;
       res.cookie("token", token, { httpOnly: true }).json({ status: "success", message: "Sesión iniciada correctamente" });
     });
   })(req, res, next);

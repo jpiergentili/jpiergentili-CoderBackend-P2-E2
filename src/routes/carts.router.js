@@ -14,15 +14,19 @@ router.get("/:cid", CartController.getCartById);
 router.post("/", CartController.createCart);
 
 // Agregar un producto al carrito (solo usuarios)
-router.post(
-  "/:cid/product/:pid",
-  passportCall("current"),
-  authorizationRole(["user"]),
-  CartController.addProductToCart
-);
+router.post("/:cid/product/:pid", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  console.log("📡 Petición recibida en `/api/carts/:cid/product/:pid`");
+  console.log("Cart ID recibido en la URL:", req.params.cid);
+  console.log("Product ID recibido en la URL:", req.params.pid);
+  console.log("Body recibido:", req.body);
+  
+  await CartController.addProductToCart(req, res);
+});
 
-// Actualizar un carrito completo con un arreglo de productos
-router.put("/:cid", CartController.updateCart);
+// Actualizar un carrito agregando productos o modificando cantidad
+router.put("/:cid", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  await CartController.updateCart(req, res);
+});
 
 // Eliminar un carrito
 router.delete("/:cid", CartController.deleteCart);

@@ -49,9 +49,10 @@
       </tr>
     </thead>
     <tbody>
+      <p>Cart ID del usuario: {{user.cart}}</p>
       {{#each products}}
         <tr>
-          <td>{{this.id}}</td>  <!-- 🔥 Ahora muestra el ID del producto -->
+          <td>{{this.id}}</td>
           <td>{{this.title}}</td>
           <td>{{this.description}}</td>
           <td>{{this.price}}</td>
@@ -59,11 +60,11 @@
           <td>{{this.stock}}</td>
           {{#if ../user}}
             {{#if (eq ../user.role "user")}}
-              <td><button class="btn btn-primary" onclick="addToCart('{{this.id}}')">Agregar</button></td>
+              <td><button class="btn btn-primary" onclick="addToCart('{{../user.cart}}', '{{{this.id}}}')">Agregar</button></td>
             {{/if}}
             {{#if (eq ../user.role "admin")}}
               <td><button class="btn btn-danger" onclick="deleteProduct('{{this.id}}')">Eliminar</button></td>
-              <td><a href="/products/update/{{this.id}}" class="btn btn-warning">Actualizar</a></td> <!-- 🔥 Corrección de la URL -->
+              <td><a href="/products/update/{{this.id}}" class="btn btn-warning">Actualizar</a></td>
             {{/if}}
           {{/if}}
         </tr>
@@ -109,36 +110,64 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  function addToCart(productId) {
-    fetch('/api/carts/cart-ids')
-      .then(response => response.json())
-      .then(carts => {
-        if (carts.length > 0) {
-          let cartOptions = carts.map(cart => `<option value="${cart._id}">${cart._id}</option>`).join('');
+    // Agregar producto al carrito
+function addToCart(cartId, productId) {
+  console.log("Cart ID recibido en addToCart:", cartId);
+  console.log("Product ID recibido en addToCart:", productId);
 
-          Swal.fire({
-            title: 'Selecciona un carrito',
-            html: `<select id="cartSelect" class="swal2-input">${cartOptions}</select>`,
-            showCancelButton: true,
-            confirmButtonText: 'Agregar al carrito',
-            preConfirm: () => {
-              const selectedCart = document.getElementById('cartSelect').value;
-              return { cartId: selectedCart };
-            }
-          }).then(result => {
-            if (result.isConfirmed) {
-              const cartId = result.value.cartId;
-              fetch(`/api/carts/${cartId}/product/${productId}`, { method: 'POST' })
-                .then(response => response.ok ? Swal.fire('Producto agregado', '', 'success') : Swal.fire('Error', 'No se pudo agregar el producto al carrito', 'error'))
-                .catch(error => Swal.fire('Error', 'Hubo un problema al agregar el producto al carrito', 'error'));
-            }
-          });
+  if (!cartId || cartId.trim() === "" || !productId || productId.trim() === "") {
+    console.error("❌ Error: cartId o productId no están definidos o están vacíos.");
+    return;
+  }
+
+  Swal.fire({
+    title: 'Ingrese la cantidad',
+    input: 'number',
+    inputAttributes: { min: 1, step: 1 },
+    showCancelButton: true,
+    confirmButtonText: 'Agregar',
+    cancelButtonText: 'Cancelar',
+    inputValidator: (value) => {
+      if (!value || value <= 0) {
+        return 'Debe ingresar una cantidad válida';
+      }
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const qty = parseInt(result.value);
+      console.log("Cantidad ingresada:", qty);
+
+      fetch(`/api/carts/${cartId}/product/${productId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qty })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
         } else {
-          Swal.fire('Error', 'No se encontraron carritos', 'error');
+          Swal.fire({
+            icon: 'success',
+            title: 'Producto agregado',
+            text: 'El producto se ha agregado correctamente al carrito.',
+            confirmButtonText: 'Aceptar'
+          });
+          console.log("✅ Producto agregado correctamente al carrito.");
         }
       })
-      .catch(error => Swal.fire('Error', 'Hubo un problema al obtener los carritos', 'error'));
-  }
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message,
+          confirmButtonText: 'Aceptar'
+        });
+      });
+    }
+  });
+}
 
   function deleteProduct(productId) {
     if (confirm("¿Estás seguro de que deseas eliminar este producto?")) {

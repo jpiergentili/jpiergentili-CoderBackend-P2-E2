@@ -9,13 +9,17 @@ class CartRepository {
         return await CartDAO.getById(id);
     }
 
+    async getByUserId(userId) {
+        return await CartDAO.getByUserId(userId); // 🔹 Implementamos esta función
+    }
+
     async create(cartData) {
         return await CartDAO.create(cartData);
     }
 
     async update(id, cartData) {
         return await CartDAO.update(id, cartData);
-    }
+    }    
 
     async delete(id) {
         return await CartDAO.delete(id);

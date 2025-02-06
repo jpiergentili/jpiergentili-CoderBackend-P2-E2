@@ -13,7 +13,7 @@ const productSchema = mongoose.Schema({
 });
 
 mongoose.set('strictQuery', false);
-productSchema.plugin(mongoosePaginate);  // Integración de mongoose-paginate-v2
+productSchema.plugin(mongoosePaginate);
 const productModel = mongoose.model('product', productSchema);
 
 export default productModel;

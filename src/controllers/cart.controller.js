@@ -47,18 +47,49 @@ class CartController {
         } catch (error) {
             res.status(500).json({ error: "Error al eliminar el carrito" });
         }
-    }
-
+    }    
+    
     async addProductToCart(req, res) {
         try {
             const { cid, pid } = req.params;
-            const updatedCart = await CartService.addProductToCart(cid, pid);
-            if (!updatedCart) return res.status(404).json({ error: "Carrito o producto no encontrado" });
+            const { qty } = req.body;
+    
+            console.log("🛒 Agregando producto al carrito");
+            console.log("Cart ID recibido en el backend:", cid);
+            console.log("Product ID recibido en el backend:", pid);
+            console.log("Cantidad recibida:", qty);
+    
+            if (!cid || !pid || !qty || qty <= 0) {
+                console.error("❌ Error: Datos inválidos.");
+                return res.status(400).json({ error: "Datos inválidos. Se requiere un ID de carrito, ID de producto y una cantidad válida." });
+            }
+    
+            const cart = await CartService.getCartById(cid);
+            if (!cart) {
+                console.error("❌ Error: Carrito no encontrado.");
+                return res.status(404).json({ error: "Carrito no encontrado" });
+            }
+    
+            const existingProduct = cart.cartProducts.find(p => p.product._id.toString() === pid);
+    
+            if (existingProduct) {
+                existingProduct.qty += qty;
+                console.log("✅ Producto existente, cantidad actualizada:", existingProduct.qty);
+            } else {
+                cart.cartProducts.push({ product: pid, qty });
+                console.log("✅ Producto agregado al carrito:", pid);
+            }
+    
+            const updatedCart = await CartService.updateCart(cid, { cartProducts: cart.cartProducts });
+    
+            console.log("✅ Carrito actualizado correctamente.");
             res.json(updatedCart);
         } catch (error) {
-            res.status(500).json({ error: "Error al agregar el producto al carrito" });
+            console.error("❌ Error al agregar producto al carrito:", error);
+            res.status(500).json({ error: "Error al agregar producto al carrito" });
         }
-    }
+    }  
+    
 }
 
 export default new CartController();

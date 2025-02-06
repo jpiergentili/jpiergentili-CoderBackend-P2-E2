@@ -9,8 +9,8 @@ class UserRepository {
         return await UserDAO.getById(id, asDTO);
     }
 
-    async getByEmail(email, asDTO = true) {
-        return await UserDAO.getByEmail(email, asDTO);
+    async getByEmail(email, asDTO = true, includePassword = false) {
+        return await UserDAO.getByEmail(email, asDTO, includePassword);
     }
 
     async create(userData) {

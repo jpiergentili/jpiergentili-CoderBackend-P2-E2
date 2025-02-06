@@ -3,8 +3,10 @@ import local from "passport-local";
 import GithubStrategy from "passport-github";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import { createHash, isValidPassword } from "../utils.js";
-import userService from "../services/user.service.js";
+import UserService from "../services/user.service.js"; // 🔹 Importación corregida
 import dotenv from "dotenv";
+dotenv.config();
+
 
 dotenv.config();
 
@@ -23,16 +25,22 @@ const initializePassport = () => {
       async (accessToken, refreshToken, profile, done) => {
         try {
           const email = profile._json.email || `${profile.username}@github.com`;
-          let user = await userService.getUserByEmail(email);
+          let user = await UserService.getUserByEmail(email);
           if (!user) {
             const newUser = {
               first_name: profile.displayName || profile.username,
               last_name: "GitHub",
-              age: 18,
+              age: 36,
               email,
               password: "Autenticado por terceros",
             };
-            user = await userService.createUser(newUser);
+            user = await UserService.createUser(newUser);
+            
+            if (!user || !user._id) {
+              console.error("❌ Error: No se pudo obtener un ID válido para el usuario de GitHub.");
+              return done(new Error("Error al crear usuario con GitHub"));
+            }
+            
           }
           done(null, user);
         } catch (error) {
@@ -51,7 +59,7 @@ const initializePassport = () => {
       },
       async (jwt_payload, done) => {
         try {
-          const user = await userService.getUserById(jwt_payload.id, false);
+          const user = await UserService.getUserById(jwt_payload.id, false);
           return done(null, user || false);
         } catch (error) {
           return done(error);
@@ -68,15 +76,21 @@ const initializePassport = () => {
       async (req, email, password, done) => {
         const { first_name, last_name, age } = req.body;
         try {
-          const existingUser = await userService.getUserByEmail(email, false);
-          if (existingUser) return done(null, false);
-          const newUser = await userService.createUser({
+          const existingUser = await UserService.getUserByEmail(email);
+          if (existingUser) return done(null, false, { message: "El usuario ya existe" });  
+          // 🔹 Crear el usuario en la base de datos
+          const newUser = await UserService.createUser({
             first_name,
             last_name,
             email,
             age,
             password: createHash(password),
           });
+  
+          if (!newUser) {
+            return done(null, false, { message: "Error al crear el usuario" });
+          }
+  
           return done(null, newUser);
         } catch (error) {
           return done(error);
@@ -84,7 +98,7 @@ const initializePassport = () => {
       }
     )
   );
-
+  
   // Estrategia local para login
   passport.use(
     "login",
@@ -92,25 +106,42 @@ const initializePassport = () => {
       { passReqToCallback: true, usernameField: "email" },
       async (req, email, password, done) => {
         try {
-          const user = await userService.getUserByEmail(email, false);
-          if (!user || !isValidPassword(user, password)) {
+          // 🔹 Obtener usuario incluyendo la contraseña
+          const user = await UserService.getUserByEmail(email, false, true);
+  
+          console.log("🔍 Usuario encontrado:", user);
+          console.log("🔐 Contraseña en la BD:", user ? user.password : "Usuario no encontrado");
+  
+          if (!user || !user.password) {
+            console.log("❌ Error: Usuario sin contraseña.");
             return done(null, false, { message: "Credenciales incorrectas" });
           }
+  
+          if (!isValidPassword(user, password)) {
+            console.log("❌ Error: Contraseña incorrecta.");
+            return done(null, false, { message: "Credenciales incorrectas" });
+          }
+          
           return done(null, user);
         } catch (error) {
+          console.error("❌ Error en autenticación:", error);
           return done(error);
         }
       }
     )
-  );
-
+  );  
+  
   passport.serializeUser((user, done) => {
+    if (!user || !user._id) {
+      console.error("❌ Error: El usuario no tiene un ID válido.");
+      return done(new Error("Usuario sin ID válido."));
+    }
     done(null, user._id.toString());
   });
-
+ 
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await userService.getUserById(id, false);
+      const user = await UserService.getUserById(id, false);
       done(null, user);
     } catch (error) {
       done(error);
