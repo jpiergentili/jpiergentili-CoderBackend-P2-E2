@@ -1,4 +1,4 @@
-// Importa el modelo de producto
+// ticket.service.js
 import productModel from "../dao/models/product.model.js";
 import TicketRepository from "../repositories/ticket.repository.js";
 import CartService from "../services/cart.service.js";
@@ -11,36 +11,59 @@ class TicketService {
       return null;
     }
 
-    let successfulPurchase = [];
-    let failedPurchase = [];
+    let successfulPurchase = []; // Productos y cantidades que se compran
+    let failedPurchase = []; // Productos y cantidades que quedan pendientes
     let totalAmount = 0;
 
-    // Iterar sobre cada producto del carrito
     for (const item of cart.cartProducts) {
-      // Verificar si hay stock suficiente
-      if (item.product.stock >= item.qty) {
-        // Actualizar el stock del producto directamente en la base de datos
+      const requestedQty = item.qty;
+      const availableStock = item.product.stock;
+
+      if (availableStock <= 0) {
+        // Sin stock: nada se compra y se deja la cantidad completa en el carrito
+        failedPurchase.push(item);
+        continue;
+      }
+
+      if (availableStock >= requestedQty) {
+        // Stock suficiente: se compra la cantidad solicitada
         await productModel.findByIdAndUpdate(
           item.product._id,
-          { $inc: { stock: -item.qty } },
+          { $inc: { stock: -requestedQty } },
           { new: true }
         );
         successfulPurchase.push({
           product: item.product._id,
-          qty: item.qty,
+          qty: requestedQty,
         });
-        totalAmount += item.product.price * item.qty;
+        totalAmount += item.product.price * requestedQty;
       } else {
-        failedPurchase.push(item);
+        // Stock parcial: se compra todo lo que esté disponible y se deja el remanente
+        await productModel.findByIdAndUpdate(
+          item.product._id,
+          { $set: { stock: 0 } },
+          { new: true }
+        );
+        successfulPurchase.push({
+          product: item.product._id,
+          qty: availableStock,
+        });
+        totalAmount += item.product.price * availableStock;
+        const remainder = requestedQty - availableStock;
+        // Se agrega al arreglo de productos no comprados por completo.
+        failedPurchase.push({
+          product: item.product, // Se conserva el objeto completo para mostrar detalles en la vista
+          qty: remainder,
+        });
       }
     }
 
-    // Si ningún producto pudo ser comprado, retornamos null o el arreglo de fallos (según tu lógica)
     if (successfulPurchase.length === 0) {
+      // Si no se pudo comprar nada, se retorna null.
       return null;
     }
 
-    // Se genera el ticket con un código único
+    // Se crea el ticket con los datos de la compra
     const ticketData = {
       code: uuidv4(),
       purchase_datetime: new Date(),
@@ -51,11 +74,11 @@ class TicketService {
 
     const ticket = await TicketRepository.create(ticketData);
 
-    // Actualizar el carrito para que solo contenga los productos que no pudieron procesarse
-    cart.cartProducts = failedPurchase;
+    // Se actualiza el carrito dejando solo los productos pendientes de compra.
     await CartService.updateCart(cartId, failedPurchase);
 
-    return ticket;
+    // Se retorna un objeto con el ticket y la lista de productos que quedaron pendientes.
+    return { ticket, failedProducts: failedPurchase };
   }
 
   async getTicketById(id) {

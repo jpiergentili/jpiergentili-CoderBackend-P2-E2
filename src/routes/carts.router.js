@@ -40,19 +40,21 @@ router.put("/:cid/empty", passportCall("current"), authorizationRole(["user"]), 
 
 router.post("/:cid/purchase", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
   try {
-      const { cid } = req.params;
-      const userEmail = req.user.email;
+    const { cid } = req.params;
+    const userEmail = req.user.email;
 
-      const ticket = await TicketService.createPurchase(cid, userEmail);
-      if (!ticket) {
-          return res.status(400).json({ error: "No se pudo completar la compra." });
-      }
+    const result = await TicketService.createPurchase(cid, userEmail);
+    if (!result || !result.ticket) {
+      return res.status(400).json({ error: "No se pudo completar la compra." });
+    }
 
-      console.log("✅ Ticket generado correctamente:", ticket);
-      res.json({ ticketId: ticket._id });
+    console.log("✅ Ticket generado correctamente:", result.ticket);
+    // Almacenar los productos no comprados (failedProducts) en la sesión
+    req.session.failedProducts = result.failedProducts;
+    res.json({ ticketId: result.ticket._id });
   } catch (error) {
-      console.error("❌ Error en la compra:", error);
-      res.status(500).json({ error: "Error al procesar la compra." });
+    console.error("❌ Error en la compra:", error);
+    res.status(500).json({ error: "Error al procesar la compra." });
   }
 });
 

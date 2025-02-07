@@ -117,8 +117,10 @@ router.get("/ticket/:tid", passportCall("current"), authorizationRole(["user"]),
       if (!ticket) {
           return res.status(404).send("Ticket no encontrado.");
       }
-
-      res.render("ticket", { ticket, user: req.user, title: "Comprobante de Compra" });
+      // Recuperar (y luego limpiar) los productos pendientes almacenados en la sesión
+      const failedProducts = req.session.failedProducts || [];
+      req.session.failedProducts = [];
+      res.render("ticket", { ticket, failedProducts, user: req.user, title: "Comprobante de Compra" });
   } catch (error) {
       console.error("Error al cargar el ticket:", error);
       res.status(500).send("Error al cargar la página del ticket.");
