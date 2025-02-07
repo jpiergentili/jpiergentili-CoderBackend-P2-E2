@@ -1,0 +1,26 @@
+<section class="container mt-5">
+    <h2>Comprobante de Compra</h2>
+    <p><strong>Código:</strong> {{ticket.code}}</p>
+    <p><strong>Fecha:</strong> {{ticket.purchase_datetime}}</p>
+    <p><strong>Total:</strong> ${{ticket.amount}}</p>
+    <p><strong>Comprador:</strong> {{ticket.purchaser}}</p>
+
+    <h3>Productos Comprados:</h3>
+    <ul>
+        {{#each ticket.products}}
+        <li>{{this.product.title}} - {{this.qty}} unidades - ${{multiply this.product.price this.qty}}</li>
+        {{/each}}
+    </ul>
+
+    {{#if failedProducts.length}}
+    <h3>Productos No Comprados:</h3>
+    <ul>
+        {{#each failedProducts}}
+        <li>{{this.product.title}} - No disponible en stock</li>
+        {{/each}}
+    </ul>
+    {{/if}}
+
+    <button onclick="window.location.href='/cart'">Volver al carrito</button>
+    <button onclick="window.location.href='/'">Seguir comprando</button>
+</section>

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import CartService from '../services/cart.service.js'
+import TicketService from "../services/ticket.service.js";
 import productService from "../services/product.service.js";
 import { passportCall, authorizationRole } from "../middlewares/auth.js";
 
@@ -81,6 +82,46 @@ router.get("/cart", passportCall("current"), authorizationRole(["user"]), async 
   } catch (error) {
     console.error("Error al obtener el carrito:", error);
     res.status(500).send("Error al cargar el carrito");
+  }
+});
+
+// Ruta para acceder al Checkout
+router.get("/:cid/checkout", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  try {
+    const { cid } = req.params;
+    const cart = await CartService.getCartById(cid);
+    if (!cart || cart.cartProducts.length === 0) {
+        return res.status(400).send("El carrito está vacío o no existe.");
+    }
+
+    let totalAmount = 0;
+    cart.cartProducts.forEach(item => {
+        totalAmount += item.product.price * item.qty;
+    });
+
+    cart.totalAmount = totalAmount;
+
+    res.render("checkout", { cart, user: req.user, title: "Resumen de Compra" });
+  } catch (error) {
+    console.error("Error al cargar el checkout:", error);
+    res.status(500).send("Error al cargar la página de checkout.");
+  }
+});
+
+
+// Ruta para mostrar el ticket después de la compra
+router.get("/ticket/:tid", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  try {
+      const { tid } = req.params;
+      const ticket = await TicketService.getTicketById(tid);
+      if (!ticket) {
+          return res.status(404).send("Ticket no encontrado.");
+      }
+
+      res.render("ticket", { ticket, user: req.user, title: "Comprobante de Compra" });
+  } catch (error) {
+      console.error("Error al cargar el ticket:", error);
+      res.status(500).send("Error al cargar la página del ticket.");
   }
 });
 

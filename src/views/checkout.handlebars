@@ -1,0 +1,33 @@
+<section class="container mt-5">
+    <h2>Resumen de Compra</h2>
+    <ul>
+        {{#each cart.cartProducts}}
+        <li>{{this.product.title}} - {{this.qty}} unidades - ${{multiply this.product.price this.qty}}</li>
+        {{/each}}
+    </ul>
+    <h3>Total: ${{cart.totalAmount}}</h3>
+    <button onclick="window.location.href='/cart'">Volver al carrito</button>
+    <button onclick="finalizarCompra('{{cart._id}}')">Finalizar Compra</button>
+</section>
+
+<script>
+    async function finalizarCompra(cartId) {
+        try {
+            const response = await fetch(`/api/carts/${cartId}/purchase`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al procesar la compra.");
+            }
+
+            const data = await response.json();
+            console.log("✅ Redirigiendo al ticket:", data.ticketId);
+            window.location.href = `/ticket/${data.ticketId}`;
+        } catch (error) {
+            console.error("❌ Error al finalizar la compra:", error);
+            alert("Hubo un problema al finalizar la compra. Inténtalo de nuevo.");
+        }
+    }
+</script>

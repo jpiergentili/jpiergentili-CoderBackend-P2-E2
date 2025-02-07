@@ -1,4 +1,5 @@
 import CartService from "../services/cart.service.js";
+import TicketService from "../services/ticket.service.js";
 
 class CartController {
     async getAllCarts(req, res) {
@@ -85,7 +86,7 @@ class CartController {
             console.error("❌ Error al agregar producto al carrito:", error);
             res.status(500).json({ error: "Error al agregar producto al carrito" });
         }
-    }      
+    }        
     
     async removeProduct(req, res) {
         try {
@@ -115,7 +116,8 @@ class CartController {
             console.error("❌ Error al vaciar el carrito:", error);
             res.status(500).json({ error: "Error al vaciar el carrito" });
         }
-    }    
+    }
+
 }
 
 export default new CartController();

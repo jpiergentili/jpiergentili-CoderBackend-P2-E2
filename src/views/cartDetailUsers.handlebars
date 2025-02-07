@@ -69,37 +69,36 @@
     updateTotal();
 
     document.querySelectorAll(".change-quantity").forEach(button => {
-    button.addEventListener("click", async (event) => {
+      button.addEventListener("click", async (event) => {
         const productId = event.currentTarget.dataset.productId;
         const change = parseInt(event.currentTarget.dataset.change);
         const quantityInput = document.querySelector(`.quantity-input[data-product-id='${productId}']`);
         
         if (quantityInput) {
-            let currentQuantity = parseInt(quantityInput.value);
-            let newQuantity = Math.max(1, currentQuantity + change); 
+          let currentQuantity = parseInt(quantityInput.value);
+          let newQuantity = Math.max(1, currentQuantity + change);
 
-            quantityInput.value = newQuantity;
-            updateSubtotal(productId);
+          quantityInput.value = newQuantity;
+          updateSubtotal(productId);
 
-            // Obtener todo el carrito y actualizar la cantidad
-            const cartId = "{{cart._id}}";
-            let updatedProducts = [];
-            
-            document.querySelectorAll(".product-row").forEach(row => {
-                const rowProductId = row.dataset.productId;
-                const rowQuantity = parseInt(row.querySelector(".quantity-input").value);
-                updatedProducts.push({ product: rowProductId, qty: rowQuantity });
-            });
+          // Obtener todo el carrito y actualizar la cantidad
+          const cartId = "{{cart._id}}";
+          let updatedProducts = [];
+          
+          document.querySelectorAll(".product-row").forEach(row => {
+            const rowProductId = row.dataset.productId;
+            const rowQuantity = parseInt(row.querySelector(".quantity-input").value);
+            updatedProducts.push({ product: rowProductId, qty: rowQuantity });
+          });
 
-            await fetch(`/api/carts/${cartId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cartProducts: updatedProducts })
-            });
-            }
-        });
+          await fetch(`/api/carts/${cartId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cartProducts: updatedProducts })
+          });
+        }
+      });
     });
-
 
     document.querySelectorAll(".remove-product").forEach(button => {
       button.addEventListener("click", (event) => {
@@ -112,88 +111,89 @@
     document.getElementById("emptyCart").addEventListener("click", confirmEmptyCart);
 
     document.getElementById("checkout").addEventListener("click", () => {
-      window.location.href = "/checkout";
-      });
+      const cartId = "{{cart._id}}";
+      window.location.href = `/${cartId}/checkout`;
     });
+  });
 
-    function updateSubtotal(productId) {
-      const quantityInput = document.querySelector(`.quantity-input[data-product-id='${productId}']`);
-      const subtotalElement = document.querySelector(`.subtotal[data-product-id='${productId}']`);
+  function updateSubtotal(productId) {
+    const quantityInput = document.querySelector(`.quantity-input[data-product-id='${productId}']`);
+    const subtotalElement = document.querySelector(`.subtotal[data-product-id='${productId}']`);
 
-      if (quantityInput && subtotalElement) {
-          const price = parseFloat(subtotalElement.getAttribute("data-price"));
-          const quantity = parseInt(quantityInput.value);
-          const subtotal = (price * quantity).toFixed(2);
+    if (quantityInput && subtotalElement) {
+      const price = parseFloat(subtotalElement.getAttribute("data-price"));
+      const quantity = parseInt(quantityInput.value);
+      const subtotal = (price * quantity).toFixed(2);
 
-          subtotalElement.textContent = subtotal;
-          updateTotal();
+      subtotalElement.textContent = subtotal;
+      updateTotal();
+    }
+  }
+
+  function updateTotal() {
+    let total = 0;
+    document.querySelectorAll(".subtotal").forEach(sub => {
+      total += parseFloat(sub.textContent) || 0;
+    });
+    document.getElementById("totalAmount").textContent = total.toFixed(2);
+  }
+
+  function confirmRemoveProduct(cartId, productId) {
+    Swal.fire({
+      title: "¿Eliminar producto?",
+      text: "Esta acción no se puede deshacer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        removeProduct(cartId, productId);
       }
-    }
+    });
+  }
 
-    function updateTotal() {
-      let total = 0;
-      document.querySelectorAll(".subtotal").forEach(sub => {
-        total += parseFloat(sub.textContent) || 0;
-      });
-      document.getElementById("totalAmount").textContent = total.toFixed(2);
-    }
+  async function removeProduct(cartId, productId) {
+    try {
+      const response = await fetch(`/api/carts/${cartId}/product/${productId}`, { method: "DELETE" });
+      const data = await response.json();
 
-    function confirmRemoveProduct(cartId, productId) {
-      Swal.fire({
-        title: "¿Eliminar producto?",
-        text: "Esta acción no se puede deshacer.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Eliminar",
-        cancelButtonText: "Cancelar"
-      }).then((result) => {
-        if (result.isConfirmed) {
-          removeProduct(cartId, productId);
-        }
-      });
-    }
-
-    async function removeProduct(cartId, productId) {
-        try {
-            const response = await fetch(`/api/carts/${cartId}/product/${productId}`, { method: "DELETE" });
-            const data = await response.json();
-
-            if (response.ok) {
-                document.querySelector(`.product-row[data-product-id='${productId}']`).remove();
-                updateTotal();
-                Swal.fire("Producto eliminado", "El producto ha sido eliminado del carrito.", "success");
-            } else {
-                Swal.fire("Error", "Hubo un problema al eliminar el producto.", "error");
-                console.error("❌ Error al eliminar el producto:", data.error);
-            }
-        } catch (error) {
-            Swal.fire("Error", "No se pudo conectar con el servidor.", "error");
-            console.error("❌ Error de conexión al eliminar el producto:", error);
-        }
-    }
-
-    function confirmEmptyCart() {
-        Swal.fire({
-            title: "¿Vaciar carrito?",
-            text: "Se eliminarán todos los productos del carrito.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Vaciar",
-            cancelButtonText: "Cancelar"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                emptyCart();
-            }
-        });
-    }
-
-    async function emptyCart() {
-        const cartId = "{{cart._id}}";
-        await fetch(`/api/carts/${cartId}/empty`, { method: "PUT" });
-
-        document.getElementById("cartItems").innerHTML = "";
+      if (response.ok) {
+        document.querySelector(`.product-row[data-product-id='${productId}']`).remove();
         updateTotal();
-        Swal.fire("Carrito vaciado", "Todos los productos fueron eliminados correctamente.", "success");
+        Swal.fire("Producto eliminado", "El producto ha sido eliminado del carrito.", "success");
+      } else {
+        Swal.fire("Error", "Hubo un problema al eliminar el producto.", "error");
+        console.error("❌ Error al eliminar el producto:", data.error);
+      }
+    } catch (error) {
+      Swal.fire("Error", "No se pudo conectar con el servidor.", "error");
+      console.error("❌ Error de conexión al eliminar el producto:", error);
     }
+  }
 
+  function confirmEmptyCart() {
+    Swal.fire({
+      title: "¿Vaciar carrito?",
+      text: "Se eliminarán todos los productos del carrito.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Vaciar",
+      cancelButtonText: "Cancelar"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        emptyCart();
+      }
+    });
+  }
+
+  async function emptyCart() {
+    const cartId = "{{cart._id}}";
+    await fetch(`/api/carts/${cartId}/empty`, { method: "PUT" });
+
+    document.getElementById("cartItems").innerHTML = "";
+    updateTotal();
+    Swal.fire("Carrito vaciado", "Todos los productos fueron eliminados correctamente.", "success");
+  }
 </script>
+

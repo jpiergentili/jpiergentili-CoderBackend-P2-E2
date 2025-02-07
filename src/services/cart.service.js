@@ -57,36 +57,29 @@ class CartService {
   }
 
   async addProductToCart(cartId, productId, quantity) {
-    console.log(
-      `🛒 Agregando producto ${productId} con cantidad ${quantity} al carrito ${cartId}`
-    );
+    console.log(`🛒 Agregando producto ${productId} con cantidad ${quantity} al carrito ${cartId}`);
 
     const cart = await CartRepository.getById(cartId);
     if (!cart) {
-      console.warn(`⚠️ No se encontró el carrito con ID: ${cartId}`);
-      throw new Error("Carrito no encontrado");
+        console.warn(`⚠️ No se encontró el carrito con ID: ${cartId}`);
+        throw new Error("Carrito no encontrado");
     }
 
-    const existingProductIndex = cart.cartProducts.findIndex(
-      (p) => p.product.toString() === productId
-    );
+    const existingProduct = cart.cartProducts.find(item => item.product._id.toString() === productId);
 
-    if (existingProductIndex !== -1) {
-      cart.cartProducts[existingProductIndex].qty += quantity;
-      console.log(
-        `🔄 Producto ya existente. Nueva cantidad: ${cart.cartProducts[existingProductIndex].qty}`
-      );
+    if (existingProduct) {
+        existingProduct.qty += quantity;
+        console.log(`🔄 Producto ya existente. Nueva cantidad: ${existingProduct.qty}`);
     } else {
-      cart.cartProducts.push({ product: productId, qty: quantity });
-      console.log(`✅ Producto agregado al carrito: ${productId}`);
+        cart.cartProducts.push({ product: productId, qty: quantity });
+        console.log(`✅ Producto agregado al carrito: ${productId}`);
     }
 
-    const updatedCart = await CartRepository.update(cartId, {
-      cartProducts: cart.cartProducts,
-    });
+    const updatedCart = await CartRepository.update(cartId, { cartProducts: cart.cartProducts });
     console.log("✅ Carrito actualizado en la base de datos.");
     return updatedCart;
   }
+
 
   async removeProductFromCart(cartId, productId) {
     console.log(`🗑️ Eliminando producto ${productId} del carrito ${cartId}`);

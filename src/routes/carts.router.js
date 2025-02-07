@@ -1,6 +1,7 @@
 import { Router } from "express";
 import CartController from "../controllers/cart.controller.js";
 import { passportCall, authorizationRole } from "../middlewares/auth.js";
+import TicketService from "../services/ticket.service.js";
 
 const router = Router();
 
@@ -35,6 +36,24 @@ router.delete("/:cid/product/:pid", passportCall("current"), authorizationRole([
 
 router.put("/:cid/empty", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
   await CartController.emptyCart(req, res);
+});
+
+router.post("/:cid/purchase", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  try {
+      const { cid } = req.params;
+      const userEmail = req.user.email;
+
+      const ticket = await TicketService.createPurchase(cid, userEmail);
+      if (!ticket) {
+          return res.status(400).json({ error: "No se pudo completar la compra." });
+      }
+
+      console.log("✅ Ticket generado correctamente:", ticket);
+      res.json({ ticketId: ticket._id });
+  } catch (error) {
+      console.error("❌ Error en la compra:", error);
+      res.status(500).json({ error: "Error al procesar la compra." });
+  }
 });
 
 export default router;
