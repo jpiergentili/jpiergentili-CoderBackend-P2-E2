@@ -13,7 +13,7 @@ class UserDAO {
     }
 
     async getByEmail(email, asDTO = true, includePassword = false) {
-        let userQuery = userModel.findOne({ email }).select("+password").lean(); // 🔹 Asegura que la contraseña se recupere
+        let userQuery = userModel.findOne({ email }).select("+password").lean();
         
         const user = await userQuery;
         

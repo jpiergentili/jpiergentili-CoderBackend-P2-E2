@@ -51,7 +51,7 @@
         'Content-Type': 'application/json'
       }
     })
-    .then(response => response.json())  // Convertir la respuesta a JSON
+    .then(response => response.json())
     .then(data => {
       if (data.error) {
         // Si hay un error, mostrar SweetAlert con el mensaje de error del servidor

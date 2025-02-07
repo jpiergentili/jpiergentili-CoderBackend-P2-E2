@@ -1,0 +1,199 @@
+<section class="h-100 gradient-custom">
+  <div class="container py-5">
+    <div class="row d-flex justify-content-center my-4">
+      <div class="col-md-8">
+        <div class="card mb-4">
+          <div class="card-header py-3">
+            <h5 class="mb-0">Carrito - <span id="itemCount">{{cart.cartProducts.length}}</span> items</h5>
+          </div>
+          <div class="card-body" id="cartItems">
+            {{#each cart.cartProducts}}
+            <div class="row align-items-center mb-3 product-row" data-product-id="{{this.product._id}}">
+              <div class="col-lg-3 col-md-12 mb-4 mb-lg-0">
+                {{#if this.product.thumbnail}}
+                  <img src="{{this.product.thumbnail}}" class="w-100 rounded" alt="{{this.product.title}}" />
+                {{else}}
+                  <img src="https://via.placeholder.com/150" class="w-100 rounded" alt="Imagen no disponible" />
+                {{/if}}
+              </div>
+              <div class="col-lg-5 col-md-6 mb-4 mb-lg-0">
+                <p><strong>{{this.product.title}}</strong></p>
+                <p>{{this.product.description}}</p>
+                <button class="btn btn-danger btn-sm remove-product" data-cart-id="{{../cart._id}}" 
+                        data-product-id="{{this.product._id}}">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+              <div class="col-lg-4 col-md-6 mb-4 mb-lg-0 d-flex justify-content-between">
+                <div class="d-flex">
+                  <button class="btn btn-outline-secondary btn-sm change-quantity" data-change="-1" 
+                          data-product-id="{{this.product._id}}">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <input type="number" class="form-control text-center quantity-input mx-2" min="1" 
+                         value="{{this.qty}}" data-product-id="{{this.product._id}}" />
+                  <button class="btn btn-outline-secondary btn-sm change-quantity" data-change="1" 
+                          data-product-id="{{this.product._id}}">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+                <p class="mt-2 text-end">
+                    <strong>$<span class="subtotal" data-product-id="{{this.product._id}}" data-price="{{this.product.price}}">
+                        {{multiply this.product.price this.qty}}
+                    </span></strong>
+                </p>
+              </div>
+            </div>
+            {{/each}}
+          </div>
+          <button class="btn btn-danger" id="emptyCart">Vaciar carrito</button>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-header py-3">
+            <h5 class="mb-0">Resumen</h5>
+          </div>
+          <div class="card-body">
+            <p><strong>Total: $<span id="totalAmount">{{cart.totalAmount}}</span></strong></p>
+            <button class="btn btn-success btn-block mt-2" id="checkout">Checkout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    updateTotal();
+
+    document.querySelectorAll(".change-quantity").forEach(button => {
+    button.addEventListener("click", async (event) => {
+        const productId = event.currentTarget.dataset.productId;
+        const change = parseInt(event.currentTarget.dataset.change);
+        const quantityInput = document.querySelector(`.quantity-input[data-product-id='${productId}']`);
+        
+        if (quantityInput) {
+            let currentQuantity = parseInt(quantityInput.value);
+            let newQuantity = Math.max(1, currentQuantity + change); 
+
+            quantityInput.value = newQuantity;
+            updateSubtotal(productId);
+
+            // Obtener todo el carrito y actualizar la cantidad
+            const cartId = "{{cart._id}}";
+            let updatedProducts = [];
+            
+            document.querySelectorAll(".product-row").forEach(row => {
+                const rowProductId = row.dataset.productId;
+                const rowQuantity = parseInt(row.querySelector(".quantity-input").value);
+                updatedProducts.push({ product: rowProductId, qty: rowQuantity });
+            });
+
+            await fetch(`/api/carts/${cartId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cartProducts: updatedProducts })
+            });
+            }
+        });
+    });
+
+
+    document.querySelectorAll(".remove-product").forEach(button => {
+      button.addEventListener("click", (event) => {
+        const cartId = event.currentTarget.dataset.cartId;
+        const productId = event.currentTarget.dataset.productId;
+        confirmRemoveProduct(cartId, productId);
+      });
+    });
+
+    document.getElementById("emptyCart").addEventListener("click", confirmEmptyCart);
+
+    document.getElementById("checkout").addEventListener("click", () => {
+      window.location.href = "/checkout";
+      });
+    });
+
+    function updateSubtotal(productId) {
+      const quantityInput = document.querySelector(`.quantity-input[data-product-id='${productId}']`);
+      const subtotalElement = document.querySelector(`.subtotal[data-product-id='${productId}']`);
+
+      if (quantityInput && subtotalElement) {
+          const price = parseFloat(subtotalElement.getAttribute("data-price"));
+          const quantity = parseInt(quantityInput.value);
+          const subtotal = (price * quantity).toFixed(2);
+
+          subtotalElement.textContent = subtotal;
+          updateTotal();
+      }
+    }
+
+    function updateTotal() {
+      let total = 0;
+      document.querySelectorAll(".subtotal").forEach(sub => {
+        total += parseFloat(sub.textContent) || 0;
+      });
+      document.getElementById("totalAmount").textContent = total.toFixed(2);
+    }
+
+    function confirmRemoveProduct(cartId, productId) {
+      Swal.fire({
+        title: "¿Eliminar producto?",
+        text: "Esta acción no se puede deshacer.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Eliminar",
+        cancelButtonText: "Cancelar"
+      }).then((result) => {
+        if (result.isConfirmed) {
+          removeProduct(cartId, productId);
+        }
+      });
+    }
+
+    async function removeProduct(cartId, productId) {
+        try {
+            const response = await fetch(`/api/carts/${cartId}/product/${productId}`, { method: "DELETE" });
+            const data = await response.json();
+
+            if (response.ok) {
+                document.querySelector(`.product-row[data-product-id='${productId}']`).remove();
+                updateTotal();
+                Swal.fire("Producto eliminado", "El producto ha sido eliminado del carrito.", "success");
+            } else {
+                Swal.fire("Error", "Hubo un problema al eliminar el producto.", "error");
+                console.error("❌ Error al eliminar el producto:", data.error);
+            }
+        } catch (error) {
+            Swal.fire("Error", "No se pudo conectar con el servidor.", "error");
+            console.error("❌ Error de conexión al eliminar el producto:", error);
+        }
+    }
+
+    function confirmEmptyCart() {
+        Swal.fire({
+            title: "¿Vaciar carrito?",
+            text: "Se eliminarán todos los productos del carrito.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Vaciar",
+            cancelButtonText: "Cancelar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                emptyCart();
+            }
+        });
+    }
+
+    async function emptyCart() {
+        const cartId = "{{cart._id}}";
+        await fetch(`/api/carts/${cartId}/empty`, { method: "PUT" });
+
+        document.getElementById("cartItems").innerHTML = "";
+        updateTotal();
+        Swal.fire("Carrito vaciado", "Todos los productos fueron eliminados correctamente.", "success");
+    }
+
+</script>

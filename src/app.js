@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import __dirname from "./utils.js";
-import handlebars from "express-handlebars"; // ✅ Importamos Handlebars
+import handlebars from "express-handlebars";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -24,6 +24,7 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/css", express.static(path.join(__dirname, "public/css")));
 app.use(cookieParser());
 
 // Configuración de sesiones
@@ -45,7 +46,6 @@ initializePassport();
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 🔹 **Registrar el helper "eq" en Handlebars**
 app.engine(
   "handlebars",
   handlebars.engine({
@@ -54,12 +54,14 @@ app.engine(
       allowProtoMethodsByDefault: true,
     },
     helpers: {
-      eq: function (a, b) {
-        return a === b;
-      },
+      eq: (a, b) => a === b,
+      multiply: (a, b) => a * b,
+      startsWith: (str, prefix) => typeof str === "string" && str.startsWith(prefix),
+      or: (a, b) => a || b
     },
   })
 );
+
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "handlebars");
 

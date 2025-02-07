@@ -1,6 +1,6 @@
 import { Router } from "express";
-import CartController from "../controllers/cart.controller.js"; // ✅ Asegurar que está importado correctamente
-import { passportCall, authorizationRole } from "../middlewares/auth.js"; // ✅ Asegurar importaciones correctas
+import CartController from "../controllers/cart.controller.js";
+import { passportCall, authorizationRole } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -29,6 +29,12 @@ router.put("/:cid", passportCall("current"), authorizationRole(["user"]), async 
 });
 
 // Eliminar un carrito
-router.delete("/:cid", CartController.deleteCart);
+router.delete("/:cid/product/:pid", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  await CartController.removeProduct(req, res);
+});
+
+router.put("/:cid/empty", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  await CartController.emptyCart(req, res);
+});
 
 export default router;

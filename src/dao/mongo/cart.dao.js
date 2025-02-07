@@ -1,4 +1,5 @@
 import cartModel from "../models/cart.model.js";
+import userModel from "../models/user.model.js";
 
 class CartDAO {
     async getAll() {
@@ -11,8 +12,8 @@ class CartDAO {
 
     async getByUserId(userId) {
         console.log("🔍 Buscando carrito para el usuario:", userId);
-        const user = await userModel.findById(userId).populate("cart"); // Buscamos el usuario con su carrito
-        return user ? user.cart : null; // Devolvemos el carrito asociado al usuario
+        const user = await userModel.findById(userId).populate("cart");
+        return user ? user.cart : null;
     }         
 
     async create(cartData) {
@@ -20,8 +21,14 @@ class CartDAO {
     }
 
     async update(id, cartData) {
-        return await cartModel.findByIdAndUpdate(id, cartData, { new: true }).populate('cartProducts.product');
-    }    
+        console.log(`🔄 Actualizando carrito con ID: ${id}, Datos:`, cartData);
+        
+        return await cartModel.findByIdAndUpdate(
+            id, 
+            { $set: { cartProducts: cartData.cartProducts } }, 
+            { new: true }
+        ).populate('cartProducts.product');
+    }               
 
     async delete(id) {
         return await cartModel.findByIdAndDelete(id);

@@ -13,11 +13,11 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  <!-- 🔥 Importar SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
   function updateProduct() {
-    const productId = "{{product.id}}"; // 🔥 Obtener correctamente el ID
+    const productId = "{{product.id}}";
 
     fetch(`/api/products/${productId}`, {
       method: 'PUT',
@@ -28,7 +28,7 @@
         title: document.getElementById('title').value,
         description: document.getElementById('description').value,
         price: parseFloat(document.getElementById('price').value),
-        thumbnails: [document.getElementById('thumbnail').value],  // 🔥 Convertir en array
+        thumbnails: [document.getElementById('thumbnail').value],
         code: document.getElementById('code').value,
         stock: parseInt(document.getElementById('stock').value, 10),
         category: document.getElementById('category').value
@@ -47,7 +47,7 @@
         text: 'El producto se ha actualizado correctamente.',
         confirmButtonText: 'Aceptar'
       }).then(() => {
-        window.location.href = '/products';  // 🔥 Redirige a la vista de productos
+        window.location.href = '/products';
       });
     })
     .catch(error => {

@@ -111,63 +111,59 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Agregar producto al carrito
-function addToCart(cartId, productId) {
-  console.log("Cart ID recibido en addToCart:", cartId);
-  console.log("Product ID recibido en addToCart:", productId);
+    function addToCart(cartId, productId) {
+      console.log("Cart ID recibido en addToCart:", cartId);
+      console.log("Product ID recibido en addToCart:", productId);
 
-  if (!cartId || cartId.trim() === "" || !productId || productId.trim() === "") {
-    console.error("❌ Error: cartId o productId no están definidos o están vacíos.");
-    return;
-  }
-
-  Swal.fire({
-    title: 'Ingrese la cantidad',
-    input: 'number',
-    inputAttributes: { min: 1, step: 1 },
-    showCancelButton: true,
-    confirmButtonText: 'Agregar',
-    cancelButtonText: 'Cancelar',
-    inputValidator: (value) => {
-      if (!value || value <= 0) {
-        return 'Debe ingresar una cantidad válida';
-      }
-    }
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const qty = parseInt(result.value);
-      console.log("Cantidad ingresada:", qty);
-
-      fetch(`/api/carts/${cartId}/product/${productId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qty })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
-        } else {
-          Swal.fire({
-            icon: 'success',
-            title: 'Producto agregado',
-            text: 'El producto se ha agregado correctamente al carrito.',
-            confirmButtonText: 'Aceptar'
-          });
-          console.log("✅ Producto agregado correctamente al carrito.");
+      Swal.fire({
+        title: 'Ingrese la cantidad',
+        input: 'number',
+        inputAttributes: { min: 1, step: 1 },
+        showCancelButton: true,
+        confirmButtonText: 'Agregar',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (value) => {
+          if (!value || value <= 0) {
+            return 'Debe ingresar una cantidad válida';
+          }
         }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: error.message,
-          confirmButtonText: 'Aceptar'
-        });
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const qty = parseInt(result.value);
+          console.log("Cantidad ingresada:", qty);
+
+          fetch(`/api/carts/${cartId}/product/${productId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qty })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              throw new Error(data.error);
+            } else {
+              Swal.fire({
+                icon: 'success',
+                title: 'Producto agregado',
+                text: 'El producto se ha agregado correctamente al carrito.',
+                confirmButtonText: 'Aceptar'
+              });
+              console.log("✅ Producto agregado correctamente al carrito.");
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: error.message,
+              confirmButtonText: 'Aceptar'
+            });
+          });
+        }
       });
     }
-  });
-}
+
 
   function deleteProduct(productId) {
     if (confirm("¿Estás seguro de que deseas eliminar este producto?")) {

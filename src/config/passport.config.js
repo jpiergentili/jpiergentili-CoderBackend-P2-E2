@@ -3,7 +3,7 @@ import local from "passport-local";
 import GithubStrategy from "passport-github";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import { createHash, isValidPassword } from "../utils.js";
-import UserService from "../services/user.service.js"; // 🔹 Importación corregida
+import UserService from "../services/user.service.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -78,7 +78,7 @@ const initializePassport = () => {
         try {
           const existingUser = await UserService.getUserByEmail(email);
           if (existingUser) return done(null, false, { message: "El usuario ya existe" });  
-          // 🔹 Crear el usuario en la base de datos
+
           const newUser = await UserService.createUser({
             first_name,
             last_name,
@@ -106,7 +106,7 @@ const initializePassport = () => {
       { passReqToCallback: true, usernameField: "email" },
       async (req, email, password, done) => {
         try {
-          // 🔹 Obtener usuario incluyendo la contraseña
+          // Obtener usuario incluyendo la contraseña
           const user = await UserService.getUserByEmail(email, false, true);
   
           console.log("🔍 Usuario encontrado:", user);

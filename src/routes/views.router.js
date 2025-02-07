@@ -1,6 +1,7 @@
 import { Router } from "express";
+import CartService from '../services/cart.service.js'
 import productService from "../services/product.service.js";
-import { passportCall, authorizationRole } from "../middlewares/auth.js"; // 🔥 Importamos los middlewares
+import { passportCall, authorizationRole } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get("/products", async (req, res) => {
   }
 });
 
-// 🔥 Rutas protegidas para admins (Crear y Actualizar Productos)
+// Rutas protegidas para admins (Crear y Actualizar Productos)
 router.get("/products/create", passportCall("current"), authorizationRole(["admin"]), (req, res) => {
   res.render("createProduct", { title: "Crear Producto", user: req.session.user });
 });
@@ -46,6 +47,40 @@ router.get("/products/update/:pid", passportCall("current"), authorizationRole([
     res.render("updateProduct", { title: "Actualizar Producto", product, user: req.session.user });
   } catch (error) {
     res.status(500).json({ error: "Error al obtener el producto" });
+  }
+});
+
+router.get("/cart", passportCall("current"), authorizationRole(["user"]), async (req, res) => {
+  try {
+    const cart = await CartService.getCartByUserId(req.user._id);
+    if (!cart) {
+      return res.render("cartDetailUsers", { cart: { cartProducts: [] }, user: req.user, title: "Carrito" });
+    }
+
+    cart.cartProducts = cart.cartProducts.map(item => ({
+      ...item,
+      product: {
+        ...item.product,
+        thumbnail: item.product.thumbnail?.startsWith("http") ? item.product.thumbnail : "https://via.placeholder.com/150"
+      }
+    }));
+
+    // Calcular el total del carrito
+    let totalAmount = 0;
+    cart.cartProducts = cart.cartProducts.map(item => {
+      if (!item.product) {
+        console.warn(`⚠️ Producto no encontrado en el carrito, ID del producto: ${item.product}`);
+        return null; // Elimina productos inválidos del carrito
+      }
+      totalAmount += item.product.price * item.qty;
+      return item;
+    }).filter(Boolean); // Filtra productos `null`
+    cart.totalAmount = totalAmount;
+
+    res.render("cartDetailUsers", { cart, user: req.user, title: "Carrito" });
+  } catch (error) {
+    console.error("Error al obtener el carrito:", error);
+    res.status(500).send("Error al cargar el carrito");
   }
 });
 

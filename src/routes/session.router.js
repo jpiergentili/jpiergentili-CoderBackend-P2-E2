@@ -59,7 +59,6 @@ router.post("/register", async (req, res, next) => {
     }
 
     try {
-      // 🔹 Verificamos si el usuario realmente se creó
       const existingUser = await UserService.getUserByEmail(user.email);
       if (!existingUser) {
         return res.status(400).json({ error: "Error al registrar el usuario" });
